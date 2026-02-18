@@ -10,7 +10,7 @@ Claude Code plugins for [Gerrit](https://www.gerritcodereview.com/) code review.
 
 Add the marketplace and install the plugin:
 
-    /plugin marketplace add GerritForge/gerrit-skills
+    /plugin marketplace add https://github.com/DanieleSassoli/gerrit-skills.git
     /plugin install gerrit@gerrit-skills
 
 ## Usage
