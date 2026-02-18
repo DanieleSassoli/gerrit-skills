@@ -58,7 +58,7 @@ Never assume which one the user wants — always ask.
 **Commit message format:**
 - Subject line: max **50 characters**, imperative mood, no trailing period
 - Blank line after the subject
-- Body: wrap lines at **72 characters**
+- Body: wrap lines at **79 characters**
 - Footers (`Change-Id:`, `Bug:`, etc.) go at the end, separated by a blank
   line from the body
 
