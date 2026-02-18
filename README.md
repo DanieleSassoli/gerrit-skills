@@ -29,6 +29,10 @@ You can also invoke the skill explicitly with `/gerrit:gerrit`.
 - **Add reviewers / comments:** Ask Claude to add reviewers or post review comments on a change.
 - **Workflow help:** Ask about rebasing, cherry-picking, change dependencies, submit strategies, and more.
 
+## Contributing
+
+This project is developed on [GerritHub.io](https://review.gerrithub.io/c/DanieleSassoli/gerrit-skills/+/1231563). GitHub PRs are welcome too.
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE) for details.
