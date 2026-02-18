@@ -140,8 +140,12 @@ For example, change 12345 patchset 3:
 git fetch origin refs/changes/45/12345/3 && git checkout FETCH_HEAD
 ```
 
-To checkout the latest patchset, query the change first to find the current
-patchset number, then fetch it.
+To checkout the latest patchset, use the change detail REST API to find
+the current patchset number from the `current_revision_number` field:
+```
+GET /changes/<project>~<change-number>/detail
+```
+Then use that number to fetch the correct patchset ref.
 
 ### 5. Comment and Add Reviewers
 
