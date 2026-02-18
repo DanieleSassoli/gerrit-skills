@@ -15,7 +15,9 @@ Add the marketplace and install the plugin:
 
 ## Installation for Gemini
 
+   ```
    gemini skills install git@github.com:DanieleSassoli/gerrit-skills.git --path plugins/gerrit/skills/gerrit
+   ```
 
 ## Usage
 
