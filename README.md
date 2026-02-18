@@ -1,32 +1,17 @@
 # gerrit-skills
 
-Claude Code skills for [Gerrit](https://www.gerritcodereview.com/) code review.
+Claude Code plugins for [Gerrit](https://www.gerritcodereview.com/) code review.
 
 ## What's Included
 
-- **`/gerrit`** — A skill that helps you interact with any Gerrit instance through git, SSH, and the REST API. It can auto-detect Gerrit repositories, push changes for review, query and inspect changes, checkout patchsets, add reviewers, post comments, and guide you through Gerrit workflows.
+- **`/gerrit:gerrit`** — A skill that helps you interact with any Gerrit instance through git, SSH, and the REST API. It can auto-detect Gerrit repositories, push changes for review, query and inspect changes, checkout patchsets, add reviewers, post comments, and guide you through Gerrit workflows.
 
 ## Installation
 
-### Using `claude mcp add-skill` (recommended)
+Add the marketplace and install the plugin:
 
-Run the following command to install the skill directly from GitHub:
-
-```bash
-claude skill add --url https://github.com/GerritForge/gerrit-skills/tree/main/skills/gerrit-skill
-```
-
-### Manual installation
-
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/GerritForge/gerrit-skills.git
-   ```
-
-2. Install the skill by pointing Claude Code to the local path:
-   ```bash
-   claude skill add --path /path/to/gerrit-skills/skills/gerrit-skill
-   ```
+    /plugin marketplace add GerritForge/gerrit-skills
+    /plugin install gerrit@gerrit-skills
 
 ## Usage
 
@@ -34,7 +19,7 @@ Once installed, Claude Code will automatically detect Gerrit repositories by che
 - Remote URLs containing "gerrit"
 - Commits with a `Change-Id:` footer
 
-You can also invoke the skill explicitly with `/gerrit`.
+You can also invoke the skill explicitly with `/gerrit:gerrit`.
 
 ### Examples
 
