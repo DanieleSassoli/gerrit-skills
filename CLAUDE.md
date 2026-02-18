@@ -4,12 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository contains Claude Code skills for [Gerrit](https://www.gerritcodereview.com/), the open-source code review tool. Skills are located under `skills/gerrit-skill/`.
+This repository is a Claude Code plugin marketplace for [Gerrit](https://www.gerritcodereview.com/), the open-source code review tool.
 
 ## Repository Structure
 
-- `skills/gerrit-skill/` — Main skill directory containing the Gerrit skill definition
-- `skills/gerrit-skill/SKILL.md` — Skill manifest (currently a placeholder directory)
+- `.claude-plugin/marketplace.json` — Marketplace manifest listing available plugins
+- `plugins/gerrit/` — Gerrit plugin directory
+- `plugins/gerrit/.claude-plugin/plugin.json` — Plugin manifest
+- `plugins/gerrit/skills/gerrit/SKILL.md` — Gerrit skill definition
 - Licensed under Apache 2.0
 
 ## Git Workflow

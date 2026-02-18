@@ -1,0 +1,16 @@
+{
+  "name": "gerrit-skills",
+  "owner": {
+    "name": "GerritForge"
+  },
+  "metadata": {
+    "description": "Claude Code plugins for Gerrit code review"
+  },
+  "plugins": [
+    {
+      "name": "gerrit",
+      "source": "./plugins/gerrit",
+      "description": "Gerrit code review assistant — push changes, query/inspect changes, checkout patchsets, add reviewers, post comments, and navigate Gerrit workflows"
+    }
+  ]
+}
