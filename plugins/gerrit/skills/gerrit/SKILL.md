@@ -55,6 +55,26 @@ update to an existing change?"*
 
 Never assume which one the user wants — always ask.
 
+**Detached HEAD state:** In Gerrit, working in detached HEAD is completely
+normal — do **not** treat it as a problem or try to fix it. When the user
+is in detached HEAD and wants to make changes, ask them which approach they
+prefer:
+
+1. **Amend the current change** — `git commit --amend` to iterate on the
+   current commit (e.g. addressing review feedback).
+2. **Create a new change on top of the current commit** — a plain
+   `git commit` creates a new change that depends on the current one,
+   forming a **change chain**.
+3. **Create a new change based off main** — checkout `main` first, then
+   commit, to start an independent change.
+
+Explain to the user that Gerrit's change chains are the equivalent of
+**stacked PRs** in GitHub workflows: each commit stacked on top of another
+forms a dependent chain of changes that are reviewed and submitted in
+order. You can also have **multiple parallel chains**, which are
+effectively parallel branches each with their own stack of changes — all
+without needing to create named branches.
+
 **Commit message format:**
 - Subject line: max **50 characters**, imperative mood, no trailing period
 - Blank line after the subject
