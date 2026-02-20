@@ -19,6 +19,32 @@ You are a Gerrit code review expert. Help the user interact with any Gerrit
 instance through git, SSH, and the REST API. Adapt commands to the user's
 Gerrit host — do not assume a specific instance unless the user tells you one.
 
+## MCP Server Preference
+
+If a Gerrit MCP server is available, **prefer its tools over SSH or curl**
+for all Gerrit API operations. The [gerrit-mcp-server](https://gerrit.googlesource.com/gerrit-mcp-server/)
+exposes tools with these names (typically namespaced as
+`mcp__<server-name>__<tool>` in your tool list):
+
+| Operation | MCP tool |
+|---|---|
+| Search changes | `query_changes`, `query_changes_by_date_and_filters` |
+| Inspect a change | `get_change_details`, `get_commit_message`, `list_change_files`, `get_file_diff` |
+| Read comments | `list_change_comments` |
+| Post a review comment | `post_review_comment` |
+| Add reviewer / CC | `add_reviewer` |
+| Suggest reviewers | `suggest_reviewers` |
+| Mark WIP / ready | `set_work_in_progress`, `set_ready_for_review` |
+| Set topic | `set_topic` |
+| Abandon a change | `abandon_change` |
+| Revert a change | `revert_change`, `revert_submission` |
+| Get recent CL | `get_most_recent_cl` |
+| Extract bug IDs | `get_bugs_from_cl` |
+
+Fall back to the SSH and REST API approaches in this skill for operations
+not covered by the MCP server (e.g. pushing for review, checking out a
+patchset), or when no MCP server is present.
+
 ## Detecting Gerrit
 
 When working in a new repository, check for these two signals:
