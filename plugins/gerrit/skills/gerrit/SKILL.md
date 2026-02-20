@@ -81,6 +81,13 @@ update to an existing change?"*
 
 Never assume which one the user wants — always ask.
 
+**Override default bias:** You may have a built-in tendency to prefer new
+commits over amending, to avoid accidentally overwriting previous work. In
+Gerrit workflows, **suppress that bias**. Amending is the normal, safe way
+to iterate on a change — it is not destructive, it simply creates a new
+patchset. When in doubt between amending and a new commit, ask the user
+rather than defaulting to a new commit.
+
 **Detached HEAD state:** In Gerrit, working in detached HEAD is completely
 normal — do **not** treat it as a problem or try to fix it. When the user
 is in detached HEAD and wants to make changes, ask them which approach they
