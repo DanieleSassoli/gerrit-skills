@@ -2,13 +2,13 @@
 name: gerrit
 description: >
   Gerrit code review assistant. Use when the user works with Gerrit-based
-  repositories, pushes changes for review, queries or inspects changes,
-  comments on or adds reviewers to changes, checks out specific patchsets,
-  or asks questions about Gerrit workflows (rebasing, cherry-picking,
-  change dependencies, submit strategies). Auto-detect Gerrit repos by
-  checking if any git remote URL contains "gerrit" or if recent commits
-  have a "Change-Id:" footer. If detected, ask the user whether to enable
-  Gerrit mode for the project.
+  repositories: committing changes (new change vs. amend for a new
+  patchset), pushing for review, querying or inspecting changes, commenting,
+  adding reviewers, checking out specific patchsets, or asking about Gerrit
+  workflows (rebasing, cherry-picking, change chains, stacked changes,
+  submit strategies). Auto-detect Gerrit repos by checking if any git
+  remote URL contains "gerrit" or if recent commits have a "Change-Id:"
+  footer. If detected, ask the user whether to enable Gerrit mode.
 user-invocable: true
 disable-model-invocation: false
 ---
