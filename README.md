@@ -4,7 +4,7 @@ AI Agent Skill for [Gerrit](https://www.gerritcodereview.com/) code review.
 
 ## What's Included
 
-- **`/gerrit:gerrit`** — A skill that helps you interact with any Gerrit instance through git, SSH, and the REST API. It can auto-detect Gerrit repositories, push changes for review, query and inspect changes, checkout patchsets, add reviewers, post comments, and guide you through Gerrit workflows.
+- **`/gerrit:gerrit`** — A skill that helps you interact with any Gerrit instance through git, SSH, and the REST API. It can push changes for review, query and inspect changes, checkout patchsets, address and reply to review comments, add reviewers, post comments, and guide you through Gerrit workflows. It follows the repository's own conventions (commit message format, target branch) when they are documented.
 
 ## Installation for Claude Code
 
@@ -21,9 +21,7 @@ Add the marketplace and install the plugin:
 
 ## Usage
 
-Once installed, agents will automatically detect Gerrit repositories by checking for:
-- Remote URLs containing "gerrit"
-- Commits with a `Change-Id:` footer
+Once installed, agents assume every repository uses Gerrit unless you tell them otherwise.
 
 You can also invoke the skill explicitly with `/gerrit:gerrit`.
 
@@ -33,6 +31,8 @@ You can also invoke the skill explicitly with `/gerrit:gerrit`.
 - **Query changes:** Ask the Agent to find open changes owned by you, or search by topic, hashtag, or project.
 - **Checkout a patchset:** Ask the Agent to fetch and checkout a specific change and patchset number.
 - **Add reviewers / comments:** Ask the Agent to add reviewers or post review comments on a change.
+- **Address review comments:** Ask the Agent to work through the unresolved comments on a change; it fixes the code, uploads a new patchset, and replies to each thread.
+- **Fewer prompts:** Tell the Agent "don't ask" (or grant autonomy in your project instructions) to skip confirmation prompts. It still never submits changes.
 - **Workflow help:** Ask about rebasing, cherry-picking, change dependencies, submit strategies, and more.
 
 ## Contributing

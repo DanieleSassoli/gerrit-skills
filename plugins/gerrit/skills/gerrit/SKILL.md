@@ -3,264 +3,187 @@ name: gerrit
 description: >
   Gerrit code review assistant. Use when the user works with Gerrit-based
   repositories: committing changes (new change vs. amend for a new
-  patchset), pushing for review, querying or inspecting changes, commenting,
-  adding reviewers, checking out specific patchsets, or asking about Gerrit
-  workflows (rebasing, cherry-picking, change chains, stacked changes,
-  submit strategies). Auto-detect Gerrit repos by checking if any git
-  remote URL contains "gerrit" or if recent commits have a "Change-Id:"
-  footer. If detected, ask the user whether to enable Gerrit mode.
+  patchset), pushing for review, querying or inspecting changes, addressing
+  and replying to review comments, adding reviewers, checking out specific
+  patchsets, or asking about Gerrit workflows (rebasing, cherry-picking,
+  change chains, stacked changes, submit strategies). Assume every
+  repository uses Gerrit unless the user says otherwise.
 user-invocable: true
 disable-model-invocation: false
 ---
 
 # Gerrit Code Review Skill
 
-You are a Gerrit code review expert. Help the user interact with any Gerrit
-instance through git, SSH, and the REST API. Adapt commands to the user's
-Gerrit host — do not assume a specific instance unless the user tells you one.
+Help the user work with any Gerrit instance through git, SSH, and the REST
+API. Do not assume a specific host unless the user names one.
+
+## Project Conventions Take Precedence
+
+Before committing or pushing, read the repository's instructions
+(`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, ...) and recent commit
+messages (`git log -5 --format=%B`). Their rules on commit message format
+(line lengths, required footers such as `Release-Notes:` or `Bug:`), target
+branch, and push options override this skill's defaults.
+
+Never assume the target branch is `main`. Use, in order: the branch the
+user names; for an existing change, its `branch` field (new patchsets must
+go to the same branch); the remote default
+(`git symbolic-ref --short refs/remotes/origin/HEAD`, or
+`git ls-remote --symref origin HEAD`). Examples use `<branch>`.
 
 ## MCP Server Preference
 
-If a Gerrit MCP server is available, **prefer its tools over SSH or curl**
-for all Gerrit API operations. The [gerrit-mcp-server](https://gerrit.googlesource.com/gerrit-mcp-server/)
-exposes tools with these names (typically namespaced as
-`mcp__<server-name>__<tool>` in your tool list):
-
-| Operation | MCP tool |
-|---|---|
-| Search changes | `query_changes`, `query_changes_by_date_and_filters` |
-| Inspect a change | `get_change_details`, `get_commit_message`, `list_change_files`, `get_file_diff` |
-| Read comments | `list_change_comments` |
-| Post a review comment | `post_review_comment` |
-| Add reviewer / CC | `add_reviewer` |
-| Suggest reviewers | `suggest_reviewers` |
-| Mark WIP / ready | `set_work_in_progress`, `set_ready_for_review` |
-| Set topic | `set_topic` |
-| Abandon a change | `abandon_change` |
-| Revert a change | `revert_change`, `revert_submission` |
-| Get recent CL | `get_most_recent_cl` |
-| Extract bug IDs | `get_bugs_from_cl` |
-
-Fall back to the SSH and REST API approaches in this skill for operations
-not covered by the MCP server (e.g. pushing for review, checking out a
-patchset), or when no MCP server is present.
-
-## Detecting Gerrit
-
-When working in a new repository, check for these two signals:
-1. **Remote URL contains "gerrit"** — check `git remote -v` output
-2. **Commits have a `Change-Id:` footer** — check `git log -5` output
-
-If either signal is present, ask the user: *"This repository appears to use
-Gerrit for code review. Should I enable Gerrit mode?"* Only activate Gerrit
-workflows after the user confirms. If neither signal is present, do not
-activate automatically — wait for the user to invoke `/gerrit` explicitly.
+If a Gerrit MCP server is available (e.g.
+[gerrit-mcp-server](https://gerrit.googlesource.com/gerrit-mcp-server/):
+`query_changes`, `list_change_comments`, `post_review_comment`,
+`add_reviewer`, ...), prefer its tools over SSH or curl. Use the commands
+below for what it does not cover (pushing, checking out a patchset,
+replying to a specific comment thread) or when no server is present.
 
 ## Restrictions
 
-- **NEVER submit or merge changes.** You may push, review, comment, and add
-  reviewers, but you must not run `gerrit review --submit`, POST to the
-  `/submit` REST endpoint, or use any other mechanism that merges a change.
-- Only execute commands (git push, SSH, curl) when the user explicitly asks
-  you to. Otherwise, provide the commands for the user to run.
-- When the user grants you permission to execute, you may run git, ssh, and
-  curl commands freely — except submit.
+- **NEVER submit or merge changes**: no `gerrit review --submit`, no POST
+  to `/submit`, no other merge mechanism, even with confirmations disabled.
+- By default, run git push, SSH, and curl only when the user asks;
+  otherwise show the commands. Once permitted, run them freely (except
+  submit).
+- **Disabling confirmations:** if the user opts out ("don't ask", "run the
+  whole flow") or project instructions grant autonomy, run
+  push/query/comment/reviewer commands directly and decide new change vs.
+  amend yourself when the request makes it clear.
+  Still ask when it is genuinely ambiguous. Lasts for the session unless
+  revoked.
 
 ## Capabilities
 
 ### 1. Making Commits
 
-**Before every commit, ask the user:** *"Should this be a new change or an
-update to an existing change?"*
+**Before every commit, decide: new change or new patchset?** Ask *"Should
+this be a new change or an update to an existing change?"* unless the
+request already answers it ("address the comments on 12345" means amend;
+"start a new change for X" means a new commit) and confirmations are
+disabled.
 
-- **New change:** Use `git commit` normally. The `commit-msg` hook will
-  generate a new `Change-Id`.
-- **Update existing change (new patchset):** Use `git commit --amend` to
-  amend the previous commit. This preserves the `Change-Id` and Gerrit will
-  create a new patchset on the same change.
+- **New change:** `git commit`; the `commit-msg` hook adds a `Change-Id`.
+- **New patchset:** `git commit --amend`; the `Change-Id` is preserved.
 
-Never assume which one the user wants — always ask.
+**Override default bias:** suppress any preference for new commits over
+amending. In Gerrit, amending is the normal, non-destructive way to iterate.
+When in doubt, ask rather than default to a new commit.
 
-**Override default bias:** You may have a built-in tendency to prefer new
-commits over amending, to avoid accidentally overwriting previous work. In
-Gerrit workflows, **suppress that bias**. Amending is the normal, safe way
-to iterate on a change — it is not destructive, it simply creates a new
-patchset. When in doubt between amending and a new commit, ask the user
-rather than defaulting to a new commit.
+**Detached HEAD is normal** in Gerrit; do not try to fix it. When the user
+wants to make changes there, ask which they prefer:
+1. Amend the current change (`git commit --amend`).
+2. A new change on top of the current commit (`git commit`), forming a
+   **change chain**, Gerrit's equivalent of stacked PRs. Several
+   independent chains can coexist without named branches.
+3. A new independent change: check out `origin/<branch>`, then commit.
 
-**Detached HEAD state:** In Gerrit, working in detached HEAD is completely
-normal — do **not** treat it as a problem or try to fix it. When the user
-is in detached HEAD and wants to make changes, ask them which approach they
-prefer:
+**Commit message format:** follow the repository's convention, including
+required footers. If it defines none: subject at most 50 characters,
+imperative, no trailing period; blank line; body wrapped at 79 characters;
+footers (`Bug:`, `Change-Id:`) last, after a blank line.
 
-1. **Amend the current change** — `git commit --amend` to iterate on the
-   current commit (e.g. addressing review feedback).
-2. **Create a new change on top of the current commit** — a plain
-   `git commit` creates a new change that depends on the current one,
-   forming a **change chain**.
-3. **Create a new change based off main** — checkout `main` first, then
-   commit, to start an independent change.
+**Missing commit-msg hook:** if a push fails for lack of a `Change-Id`,
+report the error as-is. Do not install the hook yourself.
 
-Explain to the user that Gerrit's change chains are the equivalent of
-**stacked PRs** in GitHub workflows: each commit stacked on top of another
-forms a dependent chain of changes that are reviewed and submitted in
-order. You can also have **multiple parallel chains**, which are
-effectively parallel branches each with their own stack of changes — all
-without needing to create named branches.
-
-**Commit message format:**
-- Subject line: max **50 characters**, imperative mood, no trailing period
-- Blank line after the subject
-- Body: wrap lines at **79 characters**
-- Footers (`Change-Id:`, `Bug:`, etc.) go at the end, separated by a blank
-  line from the body
-
-Example:
-```
-Fix NPE in AccountCache lookup
-
-The cache was not handling null results from the external ID index.
-Add a null check before accessing the account state.
-
-Bug: Issue 12345
-Change-Id: I1234567890abcdef1234567890abcdef12345678
-```
-
-**Missing commit-msg hook:** If a `git push` fails because the commit lacks
-a `Change-Id`, report the error to the user as-is. Do not install the hook
-yourself — let the user handle hook installation.
-
-### 2. Push Changes for Review
-
-Push to `refs/for/<branch>` with push options:
+### 2. Push for Review
 
 ```
-git push origin HEAD:refs/for/main
+git push origin HEAD:refs/for/<branch> -o topic=<name> -o r=<email>
 ```
 
-Common push options (`-o` or `push.pushOption`):
-- `topic=<name>` — group related changes
-- `r=<email>` — add reviewer
-- `cc=<email>` — add CC
-- `hashtag=<tag>` — add hashtag
-- `l=<label>=<value>` — set label (e.g. `l=Code-Review+1`)
-- `wip` / `ready` — mark as work-in-progress or ready
-- `publish-comments` — publish draft comments with the push
+A `Change-Id` that already exists on `<branch>` uploads a new patchset;
+otherwise Gerrit creates a new change. Other options: `cc=<email>`,
+`hashtag=<tag>`, `l=Code-Review+1`, `wip`, `ready`, `publish-comments`.
 
-Example with options:
-```
-git push origin HEAD:refs/for/main \
-  -o topic=my-feature \
-  -o r=reviewer@example.com \
-  -o hashtag=bugfix
-```
+### 3. Query and Inspect
 
-### 3. Query and Inspect Changes
-
-**SSH:**
 ```
 ssh -p 29418 <host> gerrit query --format=JSON --current-patch-set <query>
-```
-
-Useful query operators:
-- `status:open`, `status:merged`, `status:abandoned`
-- `owner:self`, `reviewer:self`
-- `project:<name>`, `branch:<name>`
-- `topic:<name>`, `hashtag:<tag>`
-- `change:<id>` or `<change-number>`
-- `is:wip`, `is:reviewed`, `has:draft`
-
-**REST API:**
-```
 GET /changes/?q=<query>&o=CURRENT_REVISION&o=CURRENT_COMMIT&o=LABELS
+GET /changes/<project>~<change-number>/detail
 ```
 
-To get detailed change info:
-```
-GET /changes/<change-id>/detail
-```
+Operators: `status:open|merged|abandoned`, `owner:self`, `reviewer:self`,
+`project:`, `branch:`, `topic:`, `hashtag:`, `is:wip`, `has:unresolved`,
+`has:draft`.
 
-### 4. Checkout a Specific Change
+### 4. Checkout a Patchset
 
-Fetch and checkout a change by number and patchset:
-```
-git fetch origin refs/changes/<last-two-digits>/<change-number>/<patchset> \
-  && git checkout FETCH_HEAD
-```
+Refs are `refs/changes/<NN>/<change>/<patchset>`, `<NN>` being the last two
+digits of the change number, zero-padded (change 5 → `05/5/1`):
 
-For example, change 12345 patchset 3:
 ```
 git fetch origin refs/changes/45/12345/3 && git checkout FETCH_HEAD
 ```
 
-To checkout the latest patchset, use the change detail REST API to find
-the current patchset number from the `current_revision_number` field:
+Latest patchset without authentication:
 ```
-GET /changes/<project>~<change-number>/detail
-```
-Then use that number to fetch the correct patchset ref.
-
-### 5. Comment and Add Reviewers
-
-**SSH — add a review comment:**
-```
-ssh -p 29418 <host> gerrit review <commit-sha> \
-  --message '"<comment>"' \
-  --code-review <score>
+git ls-remote origin 'refs/changes/45/12345/*' | grep -v '/meta$' \
+  | sort -t/ -k5 -n | tail -1
 ```
 
-Valid `--code-review` scores: `-2`, `-1`, `0`, `+1`, `+2`
+### 5. Address Review Comments
 
-**SSH — add a reviewer:**
+1. **Fetch** with MCP `list_change_comments` or
+   `GET /changes/<change>/comments`: a map of file path (`/COMMIT_MSG`,
+   `/PATCHSET_LEVEL` for patchset-level) to comments with `id`,
+   `in_reply_to`, `patch_set`, `line`, `range`, `side`, `message`,
+   `unresolved`, `updated`. Summary messages and votes:
+   `GET /changes/<change>/messages`.
+2. **Find open threads:** follow `in_reply_to` to the root; a thread is
+   open if its most recent comment (by `updated`) has `unresolved: true`.
+3. **Locate the code by content:** `line` refers to the comment's
+   `patch_set`, which may be older than the current one.
+4. **Fix, amend, and push** to the change's own branch.
+5. **Reply** in one review per patchset, against the patchset the comments
+   were made on:
+   ```
+   POST /changes/<change>/revisions/<patch_set>/review
+   {"comments": {"path/to/File.java": [
+     {"in_reply_to": "<id>", "line": 42, "message": "Done", "unresolved": false}
+   ]}}
+   ```
+   Copy `line` (or `range`) and `side` from the parent; omit them for
+   `/PATCHSET_LEVEL`. Always set `unresolved`: a reply otherwise inherits
+   the parent's value. Over SSH, pipe the JSON to
+   `ssh -p 29418 <host> gerrit review --json <change>,<patch_set>`.
+6. **Resolve only what you fixed.** If you disagree, addressed it only
+   partly, or need the reviewer's input, explain, leave it unresolved, and
+   tell the user.
+
+### 6. Comment and Add Reviewers
+
 ```
-ssh -p 29418 <host> gerrit set-reviewers \
-  -a <email> <change-number>
+ssh -p 29418 <host> gerrit review <change>,<patchset> \
+  --message '"<comment>"' --code-review <-2..+2>
+ssh -p 29418 <host> gerrit set-reviewers -a <email> <change>
+
+POST /changes/<change>/revisions/current/review
+{"message": "<comment>", "labels": {"Code-Review": <score>}}
+POST /changes/<change>/reviewers
+{"reviewer": "<email>"}
 ```
 
-**REST API — post a review:**
+### 7. Workflow Guidance
+
+Explain Gerrit concepts (rebasing, cherry-picking, relation chains, topics,
+submit strategies) when asked. A change is `NEW`, `MERGED`, or `ABANDONED`;
+an open change may also be work-in-progress or private, and becomes
+submittable once its submit requirements (e.g. `Code-Review+2`,
+`Verified+1`) are met. After a rebase, push to `refs/for/<branch>` to
+upload it as a new patchset.
+
+## REST API Usage
+
+Every JSON response starts with the XSSI guard line `)]}'`; strip it
+before parsing:
 ```
-POST /changes/<change-id>/revisions/current/review
-{
-  "message": "<comment>",
-  "labels": { "Code-Review": <score> }
-}
+curl -s -u <user>:<http-password> https://<host>/a/changes/12345/detail \
+  | tail -n +2 | jq .
 ```
 
-**REST API — add a reviewer:**
-```
-POST /changes/<change-id>/reviewers
-{ "reviewer": "<email>" }
-```
-
-### 6. Workflow Guidance
-
-When the user asks about Gerrit workflows, explain clearly with examples.
-Key topics to cover when asked:
-
-- **Change lifecycle:** WIP → Active → Reviewed → Submitted
-- **Rebasing:** When and how to rebase on latest upstream
-  (`git rebase origin/main && git push origin HEAD:refs/for/main`).
-  Gerrit creates a new patchset automatically.
-- **Cherry-picking:** Using the Gerrit UI or `git cherry-pick` to move
-  changes between branches.
-- **Amending changes:** `git commit --amend` preserves the Change-Id and
-  creates a new patchset on the existing change.
-- **Change dependencies (relation chain):** When changes are stacked,
-  Gerrit tracks parent-child relationships. Explain how to manage chains.
-- **Submit strategies:** Merge, rebase-if-necessary, rebase-always,
-  cherry-pick, merge-if-necessary. Explain the differences when asked.
-- **Topics:** Grouping related changes for atomic review and submission.
-- **Change-Id:** The `Change-Id` footer in commit messages links commits
-  to Gerrit changes. Generated by the `commit-msg` hook.
-
-## REST API Authentication
-
-Most Gerrit REST API endpoints require authentication. The user should
-provide credentials or confirm how to authenticate. Common patterns:
-
-- HTTP credentials: `curl -u <user>:<http-password> https://<host>/a/...`
-- The `/a/` prefix triggers authentication on most Gerrit instances.
-- Cookies or `.netrc` may also be used.
-
-Do not assume or hardcode credentials. Ask the user if authentication
-details are needed.
+The `/a/` prefix requests authentication (HTTP password, cookies, or
+`.netrc`). Never assume or hardcode credentials; ask the user how to
+authenticate.
